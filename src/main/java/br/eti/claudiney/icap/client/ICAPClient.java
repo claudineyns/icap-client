@@ -42,7 +42,7 @@ public class ICAPClient {
 	
 	public static void main(String[] args) throws Exception {
 		
-		ICAPClient client = new ICAPClient("lab.ptr.net.br", 1344);
+		ICAPClient client = new ICAPClient("host", 0);
 		
 		File file = new File("c:\\temp\\eicar.com.txt");
 //		File file = new File("c:\\temp\\DAS-PGMEI-32081807000192.pdf");
