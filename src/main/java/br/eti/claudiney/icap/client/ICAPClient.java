@@ -7,17 +7,23 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.commons.io.IOUtils;
 
 import br.eti.claudiney.icap.client.ICAPRequest.Mode;
 
 public class ICAPClient {
 
+	private Logger logger = Logger.getLogger(getClass().getCanonicalName());
+	
 	private String host;
 	private int port = 0;
 	
@@ -45,7 +51,7 @@ public class ICAPClient {
 		return VERSION;
 	}
 	
-	public ICAPResponse info() throws ICAPException {
+	public ICAPResponse server_info() throws ICAPException {
 		
 		String service = "info";
 		
@@ -140,20 +146,122 @@ public class ICAPClient {
 	}
 	
 	public ICAPResponse virus_scan(File file) throws ICAPException {
+		
 		String service = "virus_scan";
-		ICAPRequest request = new ICAPRequest(service, Mode.RESPMOD);
-		request.setHttpResponseBody(file);
+		
+		ICAPRequest request = new ICAPRequest(service, Mode.REQMOD);
+		
+        // First part of header
+        String requestHeader 
+        		= "POST /" + file.getName() + " HTTP/1.1"+END_LINE_DELIMITER
+        		+ "Host: localhost"+END_LINE_DELIMITER
+        		+ "User-Agent: "+USER_AGENT+END_LINE_DELIMITER
+        		+ "Content-Type: application/octet-stream"+END_LINE_DELIMITER
+        		+ "Content-Length: "+file.length()+END_LINE_DELIMITER
+        		+ END_LINE_DELIMITER;
+		
+        request.setHttpRequestHeader(requestHeader.getBytes());
+		
+		request.setHttpRequestBody(file);
+		
 		return virus_scan(request);
+		
 	}
 	
 	public ICAPResponse virus_scan(URL url) throws ICAPException {
+		
 		String service = "virus_scan";
+		
 		ICAPRequest request = new ICAPRequest(service, Mode.RESPMOD);
+		
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		
+		URLConnection httpClient = null;
+		InputStream in = null;
+		try {
+			httpClient = url.openConnection();
+		} catch(IOException e) {
+			throw new ICAPException(e);
+		}
+		
+		httpClient.setDoInput(true);
+		httpClient.setDoOutput(false);
+		
+		Map<String, List<String>> httpRequestHeaders = 
+				httpClient.getRequestProperties();
+		
+		try {
+			in = httpClient.getInputStream();
+			IOUtils.copy(in, out);
+		} catch(IOException e) {
+			throw new ICAPException(e);
+		} finally {
+			try { if(in != null) in.close(); } catch(IOException f){}
+		}
+		
+		//######### RESPONSE HEADERS ################
+		
+		Set<Map.Entry<String, List<String>>> requestEntries = 
+				httpRequestHeaders.entrySet();
+		
+		int httpServerPort = url.getPort();
+		String httpPort = ":"+Integer.toString(httpServerPort);
+		if(httpServerPort == -1) {
+			httpPort = "";
+		}
+		
+		StringBuilder icapHttpRequestHeaders = new StringBuilder();
+		icapHttpRequestHeaders.append("GET " + url.getFile() + " HTTP/1.1").append(END_LINE_DELIMITER);
+		icapHttpRequestHeaders.append("Host: ").append(url.getHost()).append(httpPort).append(END_LINE_DELIMITER);
+		icapHttpRequestHeaders.append("User-Agent: ").append(USER_AGENT).append(END_LINE_DELIMITER);
+		
+		for( Map.Entry<String, List<String>> entry: requestEntries ) {
+			if(entry.getKey() == null || "null".equalsIgnoreCase(entry.getKey())) {
+				continue;
+			}
+			StringBuilder value = new StringBuilder();
+			for( String v: entry.getValue() ) {
+				if(value.length()>0)value.append(", ");
+				value.append(v);
+			}
+			icapHttpRequestHeaders.append(entry.getKey()).append(": ").append(value).append(END_LINE_DELIMITER);
+		}
+		icapHttpRequestHeaders.append(END_LINE_DELIMITER);
+
+		//######### RESPONSE HEADERS ################
+		
+		Map<String, List<String>> httpResponseHeaders = 
+				httpClient.getHeaderFields();
+		Set<Map.Entry<String, List<String>>> responseEntries = 
+				httpResponseHeaders.entrySet();
+		
+		StringBuilder icapHttpResponseHeaders = new StringBuilder();
+		icapHttpResponseHeaders.append("HTTP/1.1 200 OK").append(END_LINE_DELIMITER);
+		for( Map.Entry<String, List<String>> entry: responseEntries ) {
+			if(entry.getKey() == null || "null".equalsIgnoreCase(entry.getKey())) {
+				continue;
+			}
+			StringBuilder value = new StringBuilder();
+			for( String v: entry.getValue() ) {
+				if(value.length()>0)value.append(", ");
+				value.append(v);
+			}
+			icapHttpResponseHeaders.append(entry.getKey()).append(": ").append(value).append(END_LINE_DELIMITER);
+		}
+		icapHttpResponseHeaders.append(END_LINE_DELIMITER);
+		
+		//-------------------------------------------------------
+		
 		request.setHttpHost(url.getHost());
 		request.setHttpPort(url.getPort());
 		request.setResourceName(url.getFile());
-		request.setHttpResponseBody(url);
+		
+		request.setHttpRequestHeader(icapHttpRequestHeaders.toString().getBytes());
+		request.setHttpResponseHeader(icapHttpResponseHeaders.toString().getBytes());
+		request.setHttpResponseBody(out.toByteArray());
+		
 		return virus_scan(request);
+		
 	}
 	
 	private ICAPResponse virus_scan(ICAPRequest request) throws ICAPException {
@@ -179,24 +287,6 @@ public class ICAPClient {
 		if(httpPort == null) {
 			httpPort = Integer.valueOf(getICAPPort());
 		}
-		
-        // First part of header
-        String requestHeader 
-        		= "GET /" + resourceName + " HTTP/1.1"+END_LINE_DELIMITER
-        		+ "Host: "+httpHost+":"+httpPort+END_LINE_DELIMITER
-        		+ "User-Agent: "+USER_AGENT+END_LINE_DELIMITER
-        		+ END_LINE_DELIMITER;
-        
-        String responseHeader
-        		= "HTTP/1.1 200 OK" + END_LINE_DELIMITER
-        		+ "Content-Type: application/octet-stream"+END_LINE_DELIMITER
-        		+ "Content-Length: "+request.getHttpResponseBody().length + END_LINE_DELIMITER
-        		+ "Transfer-Encoding: chunked" + END_LINE_DELIMITER
-        		+ END_LINE_DELIMITER;
-		
-        request.setHttpRequestHeader(requestHeader.getBytes());
-        
-        request.setHttpResponseHeader(responseHeader.getBytes());
         
 		return sendRequest(request);
 
@@ -322,10 +412,12 @@ public class ICAPClient {
         os.write(icapRequestHeader.getBytes());
         
         if( httpRequestHeader.length > 0 ) {
+        	info("\n### (send) HTTP REQUEST HEADER ###\n"+new String(httpRequestHeader));
         	os.write(httpRequestHeader);
         }
         
         if( httpResponseHeader.length > 0 ) {
+        	info("\n### (send) HTTP RESPONSE HEADER ###\n"+new String(httpResponseHeader));
         	os.write(httpResponseHeader);
         }
         
@@ -435,6 +527,7 @@ public class ICAPClient {
         if( httpRequestHeaderSize > 0 ) {
         	parseContent = new byte[httpRequestHeaderSize];
         	is.read(parseContent);
+        	info("\n### (receive) HTTP REQUEST HEADER ###\n"+new String(parseContent));
         	response.setHttpRequestHeader(parseContent);
         }
     	
@@ -447,6 +540,7 @@ public class ICAPClient {
         if( httpResponseHeaderSize > 0 ) {
         	parseContent = new byte[httpResponseHeaderSize];
         	is.read(parseContent);
+        	info("\n### (receive) HTTP RESPONSE HEADER ###\n"+new String(parseContent));
         	response.setHttpResponseHeader(parseContent);
         }
     	
@@ -608,6 +702,10 @@ public class ICAPClient {
 			
 		}
 		
+	}
+	
+	private void info(Object message) {
+		logger.info(message.toString());
 	}
 	
 }
