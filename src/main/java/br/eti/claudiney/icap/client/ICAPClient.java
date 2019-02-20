@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.URL;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,36 +33,16 @@ public class ICAPClient {
 		this.port = port;
 	}
 	
-	public String getHost() {
+	public String getICAPHost() {
 		return host;
 	}
 	
-	public int getPort() {
+	public int getICAPPort() {
 		return port;
 	}
 	
-	public static void main(String[] args) throws Exception {
-		
-		ICAPClient client = new ICAPClient("host", 0);
-		
-		File file = new File("c:\\temp\\eicar.com.txt");
-//		File file = new File("c:\\temp\\DAS-PGMEI-32081807000192.pdf");
-		ICAPResponse response = client.virus_scan(file);
-//		ICAPResponse response = client.echo(file);
-//		ICAPResponse response = client.info();
-		
-		System.out.println(response);
-		Map<String, List<String>> headers = response.getHeaderEntries();
-		Set<Map.Entry<String, List<String>>> entries = headers.entrySet();
-		for( Map.Entry<String, List<String>> entry: entries ) {
-			System.out.print(String.format("%s=%s\n", entry.getKey(), entry.getValue()));
-		}
-		System.out.println();
-		
-		if( response.getBody() != null ) {
-			System.err.println(new String(response.getBody(), "UTF-8"));
-		}
-		
+	public static String getICAPVersion() {
+		return VERSION;
 	}
 	
 	public ICAPResponse info() throws ICAPException {
@@ -74,75 +55,148 @@ public class ICAPClient {
 		
 		request.setPreview(option.getIntegerHeader("Preview"));
 		
+		String httpHost = request.getHttpHost();
+		Integer httpPort = request.getHttpPort();
+		
+		if(httpHost == null) {
+			httpHost = getICAPHost();
+		}
+		
+		if(httpPort == null) {
+			httpPort = Integer.valueOf(getICAPPort());
+		}
+		
         String requestHeader 
-        		= "GET /info HTTP/1.1"+END_LINE_DELIMITER
-        		+ "Host: " + getHost() + ":" + getPort() + END_MESSAGE_DELIMITER;
+        		= "GET / HTTP/1.1"+END_LINE_DELIMITER
+        		+ "Host: "+httpHost+":"+httpPort+END_LINE_DELIMITER
+        		+ "User-Agent: "+USER_AGENT+END_LINE_DELIMITER
+        		+ END_LINE_DELIMITER;
         
-        request.setRequestHeader(requestHeader);
+        request.setHttpRequestHeader(requestHeader.getBytes());
         
 		return sendRequest(request);
 
 	}
 	
 	public ICAPResponse echo(File file) throws ICAPException {
-		
 		String service = "echo";
-		
-		ICAPResponse option = options(service);
-
 		ICAPRequest request = new ICAPRequest(service, Mode.RESPMOD);
+		request.setResourceName(file.getName());
+		request.setHttpResponseBody(file);
+		return echo(request);
+	}
+	
+	public ICAPResponse echo(URL url) throws ICAPException {
+		String service = "echo";
+		ICAPRequest request = new ICAPRequest(service, Mode.RESPMOD);
+		request.setResourceName(url.getFile());
+		request.setHttpResponseBody(url);
+		return echo(request);
+	}
+	
+	private ICAPResponse echo(ICAPRequest request) throws ICAPException {
+		
+		ICAPResponse option = options(request.getService());
 		
 		request.setPreview(option.getIntegerHeader("Preview"));
-		try {
-			request.setContent(file);
-		} catch(IOException e) {
-			throw new ICAPException(e);
-		}
 
-        // First part of header
+		String resourceName=request.getResourceName();
+		if( resourceName != null ) {
+			while(resourceName.startsWith("/")) {
+				resourceName = resourceName.substring(1);
+			}
+		}
+		
+		String httpHost = request.getHttpHost();
+		Integer httpPort = request.getHttpPort();
+		
+		if(httpHost == null) {
+			httpHost = getICAPHost();
+		}
+		
+		if(httpPort == null) {
+			httpPort = Integer.valueOf(getICAPPort());
+		}
+		
         String requestHeader 
-        		= "GET /" + request.getResourceName() + " HTTP/1.1"+END_LINE_DELIMITER
-        		+ "Host: " + getHost() + ":" + getPort() + END_MESSAGE_DELIMITER;
+        		= "GET /"+resourceName+" HTTP/1.1"+END_LINE_DELIMITER
+        		+ "Host: "+httpHost+":"+httpPort+END_LINE_DELIMITER
+        		+ "User-Agent: "+USER_AGENT+END_LINE_DELIMITER
+        		+ END_LINE_DELIMITER;
         
         String responseHeader
         		= "HTTP/1.1 200 OK" + END_LINE_DELIMITER
+        		+ "Content-Type: application/octet-stream"+END_LINE_DELIMITER
+        		+ "Content-Length: "+request.getHttpResponseBody().length+END_LINE_DELIMITER
         		+ "Transfer-Encoding: chunked" + END_LINE_DELIMITER
-        		+ "Content-Length: "+request.getContent().length + END_MESSAGE_DELIMITER;
+        		+ END_LINE_DELIMITER;
 		
-        request.setRequestHeader(requestHeader);
-        request.setResponseHeader(responseHeader);
+        request.setHttpRequestHeader(requestHeader.getBytes());
+        
+        request.setHttpResponseHeader(responseHeader.getBytes());
         
 		return sendRequest(request);
 
 	}
 	
 	public ICAPResponse virus_scan(File file) throws ICAPException {
-		
 		String service = "virus_scan";
-		
-		ICAPResponse option = options(service);
-
 		ICAPRequest request = new ICAPRequest(service, Mode.RESPMOD);
+		request.setHttpResponseBody(file);
+		return virus_scan(request);
+	}
+	
+	public ICAPResponse virus_scan(URL url) throws ICAPException {
+		String service = "virus_scan";
+		ICAPRequest request = new ICAPRequest(service, Mode.RESPMOD);
+		request.setHttpHost(url.getHost());
+		request.setHttpPort(url.getPort());
+		request.setResourceName(url.getFile());
+		request.setHttpResponseBody(url);
+		return virus_scan(request);
+	}
+	
+	private ICAPResponse virus_scan(ICAPRequest request) throws ICAPException {
+		
+		ICAPResponse option = options(request.getService());
 		
 		request.setPreview(option.getIntegerHeader("Preview"));
-		try {
-			request.setContent(file);
-		} catch(IOException e) {
-			throw new ICAPException(e);
-		}
 
+		String resourceName=request.getResourceName();
+		if( resourceName != null ) {
+			while(resourceName.startsWith("/")) {
+				resourceName = resourceName.substring(1);
+			}
+		}
+		
+		String httpHost = request.getHttpHost();
+		Integer httpPort = request.getHttpPort();
+		
+		if(httpHost == null) {
+			httpHost = getICAPHost();
+		}
+		
+		if(httpPort == null) {
+			httpPort = Integer.valueOf(getICAPPort());
+		}
+		
         // First part of header
         String requestHeader 
-        		= "GET /" + request.getResourceName() + " HTTP/1.1"+END_LINE_DELIMITER
-        		+ "Host: " + getHost() + ":" + getPort() + END_MESSAGE_DELIMITER;
+        		= "GET /" + resourceName + " HTTP/1.1"+END_LINE_DELIMITER
+        		+ "Host: "+httpHost+":"+httpPort+END_LINE_DELIMITER
+        		+ "User-Agent: "+USER_AGENT+END_LINE_DELIMITER
+        		+ END_LINE_DELIMITER;
         
         String responseHeader
         		= "HTTP/1.1 200 OK" + END_LINE_DELIMITER
+        		+ "Content-Type: application/octet-stream"+END_LINE_DELIMITER
+        		+ "Content-Length: "+request.getHttpResponseBody().length + END_LINE_DELIMITER
         		+ "Transfer-Encoding: chunked" + END_LINE_DELIMITER
-        		+ "Content-Length: "+request.getContent().length + END_MESSAGE_DELIMITER;
+        		+ END_LINE_DELIMITER;
 		
-        request.setRequestHeader(requestHeader);
-        request.setResponseHeader(responseHeader);
+        request.setHttpRequestHeader(requestHeader.getBytes());
+        
+        request.setHttpResponseHeader(responseHeader.getBytes());
         
 		return sendRequest(request);
 
@@ -197,85 +251,98 @@ public class ICAPClient {
 		
 	}
 	
+	private static byte[] getContentOrDefault(byte[] content) {
+		if(content == null) return new byte[]{};
+		return content;
+	}
+	
 	private ICAPResponse makeRequest(ICAPRequest request) throws IOException {
         
-        byte[] content = request.getContent();
-        if(content == null) {
-        	content = new byte[]{};
+        byte[] httpRequestHeader = getContentOrDefault(request.getHttpRequestHeader());
+        byte[] httpRequestBody = getContentOrDefault(request.getHttpRequestBody());
+        byte[] httpResponseHeader = getContentOrDefault(request.getHttpResponseHeader());
+        byte[] httpResponseBody = getContentOrDefault(request.getHttpResponseBody());
+        
+        byte[] content = httpRequestBody;
+        if(content.length == 0) {
+        	content = httpResponseBody;
         }
-
+        
 		Socket socket = new Socket(host, port);
 		
 		InputStream is = socket.getInputStream();
 		OutputStream os = socket.getOutputStream();
         
-        int previewSize = request.getPreview();
+        int preview = request.getPreview();
         if (content.length < request.getPreview()){
-            previewSize = content.length;
+            preview = content.length;
         }
         
         StringBuilder encapsulated = new StringBuilder();
-        encapsulated.append("req-hdr=0");
+        int encapsulatedOffset = 0;
         
-        int responseHeaderStart = 0;
-        int responseBodyStart = 0;
-        
-        int requestHeaderSize = 0;
-        if( request.getRequestHeader() != null ) {
-        	requestHeaderSize = request.getRequestHeader().length();
-        	responseHeaderStart = requestHeaderSize;
-        	responseBodyStart = requestHeaderSize;
+        if(httpRequestHeader.length > 0) {
+        	if(encapsulated.length()>0) encapsulated.append(", ");
+        	encapsulated.append("req-hdr="+encapsulatedOffset);
+        	encapsulatedOffset += httpRequestHeader.length; 
         }
         
-        int responseHeaderSize = 0;
-        if( request.getResponseHeader() != null ) {
-        	responseHeaderSize = request.getResponseHeader().length();
-        	responseBodyStart += responseHeaderSize; 
+        if(httpRequestBody.length > 0) {
+        	if(encapsulated.length()>0) encapsulated.append(", ");
+        	encapsulated.append("req-body="+encapsulatedOffset);
+        	encapsulatedOffset += httpRequestBody.length; 
         }
         
-        if( previewSize > 0 ) {
-        	encapsulated.append(", res-hdr="+responseHeaderStart);
-        	encapsulated.append(", res-body="+responseBodyStart);
-        } else {
-        	encapsulated.append(", null-body="+responseBodyStart);
+        if(httpResponseHeader.length > 0) {
+        	if(encapsulated.length()>0) encapsulated.append(", ");
+        	encapsulated.append("res-hdr="+encapsulatedOffset);
+        	encapsulatedOffset += httpResponseHeader.length; 
+        }
+        
+        if(httpResponseBody.length > 0) {
+        	if(encapsulated.length()>0) encapsulated.append(", ");
+        	encapsulated.append("res-body="+encapsulatedOffset);
+        	encapsulatedOffset += httpResponseBody.length; 
+        }
+        
+        if( httpRequestBody.length ==0 && httpResponseBody.length == 0 ) {
+        	if(encapsulated.length()>0) encapsulated.append(", ");
+        	encapsulated.append("null-body="+encapsulatedOffset);
         }
 		
         String icapRequestHeader = 
         		request.getMode().name()+" icap://"+host+"/"+request.getService()+" ICAP/"+VERSION+END_LINE_DELIMITER
               + "Host: "+host+END_LINE_DELIMITER
-              + "Connection: close"+END_LINE_DELIMITER
               + "User-Agent: "+USER_AGENT+END_LINE_DELIMITER
               + "Allow: 204"+END_LINE_DELIMITER
-              + "Preview: "+previewSize+END_LINE_DELIMITER
-              +"Encapsulated: "+encapsulated.toString()+END_LINE_DELIMITER
+              + "Preview: "+preview+END_LINE_DELIMITER
+              + "Encapsulated: "+encapsulated.toString()+END_LINE_DELIMITER
               + END_LINE_DELIMITER;
         
         os.write(icapRequestHeader.getBytes());
-
-        if( requestHeaderSize > 0 ) {
-        	os.write(request.getRequestHeader().getBytes());
+        
+        if( httpRequestHeader.length > 0 ) {
+        	os.write(httpRequestHeader);
         }
         
-        if( responseHeaderSize > 0 ) {
-        	os.write(request.getResponseHeader().getBytes());
+        if( httpResponseHeader.length > 0 ) {
+        	os.write(httpResponseHeader);
         }
         
-        if(previewSize > 0) {
+        if( preview > 0 ) {
 	        
-	        os.write(Integer.toHexString(previewSize).getBytes());
+	        os.write(Integer.toHexString(preview).getBytes());
 	        os.write(END_LINE_DELIMITER.getBytes());
 	        
-        	os.write(content, 0, previewSize);
+        	os.write(content, 0, preview);
         	os.write(END_LINE_DELIMITER.getBytes());
         	
-        	if (content.length <= previewSize){
+        	if( content.length <= preview ){
         		// Fim da transmissão
-        		os.write("0; ieof".getBytes());
-        		os.write(END_MESSAGE_DELIMITER.getBytes());
-        	} else if (previewSize != 0){
+        		os.write( ("0; ieof"+END_MESSAGE_DELIMITER).getBytes() );
+        	} else if (preview != 0){
         		// Ainda tem mais para transmitir
-        		os.write("0".getBytes());
-        		os.write(END_MESSAGE_DELIMITER.getBytes());
+        		os.write( ("0"+END_MESSAGE_DELIMITER).getBytes() );
         	}
         	
         }
@@ -287,15 +354,14 @@ public class ICAPClient {
         
         if( response.getStatus() == 100 /*continue*/ ) {
         	
-        	int remaining = (content.length - previewSize);
+        	int remaining = (content.length - preview);
             os.write(Integer.toHexString(remaining).getBytes());
             os.write(END_LINE_DELIMITER.getBytes());
             
-            os.write(content, previewSize, remaining);
+            os.write(content, preview, remaining);
             os.write(END_LINE_DELIMITER.getBytes());
             
-        	os.write("0".getBytes());
-        	os.write(END_MESSAGE_DELIMITER.getBytes());
+        	os.write( ("0"+END_MESSAGE_DELIMITER).getBytes() );
         	
         	os.flush();
         	
@@ -315,54 +381,133 @@ public class ICAPClient {
 	private void extractResponse(
 			ICAPResponse response, 
 			InputStream is) throws IOException {
-		
-        String content = null;
         
-        ByteArrayOutputStream cache = new ByteArrayOutputStream();
-        int reader = -1;
+		ByteArrayOutputStream cache = new ByteArrayOutputStream();
+		readHeaders(is, cache);
         
-        while((reader = is.read()) != -1) {
-        	cache.write(reader);
-        	byte[] data = cache.toByteArray();
-        	if( data.length >= 4 ) {
-	        	if(        data[data.length - 4] == '\r' 
-	        			&& data[data.length - 3] == '\n' 
-	        			&& data[data.length - 2] == '\r' 
-	        			&& data[data.length - 1] == '\n' ) {
-	        		break;
-	        	}
-        	}
-        }
+        String icapResponseHeaders = 
+        		new String(cache.toByteArray(), "UTF-8");
         
-        content = new String(cache.toByteArray(), "UTF-8");
-        
-        extractHeaders(response, content);
+        extractHeaders(response, icapResponseHeaders);
         
         if( response.getStatus() == 100 
         		|| response.getStatus() == 204 
         		|| response.getStatus() > 400 ) {
         	return;
         }
+
+        int httpRequestHeaderSize = 0;
+        int httpResponseHeaderSize = 0;
         
-        if( ! response.containHeaderValue("Encapsulated", "null-body") ) {
-	        cache = new ByteArrayOutputStream();
-	        while((reader = is.read()) != -1) {
-	        	cache.write(reader);
-	        	byte[] data = cache.toByteArray();
-	        	if( data.length >= 5 ) {
-		        	if(        data[data.length - 5] == '0'
-		        			&& data[data.length - 4] == '\r' 
-		        			&& data[data.length - 3] == '\n' 
-		        			&& data[data.length - 2] == '\r' 
-		        			&& data[data.length - 1] == '\n' ) {
-		        		break;
-		        	}
-	        	}
-	        }
+        String lastOffsetLabel = "";
+        
+        int lastOffsetValue = 0;
+        
+        List<String> encapsulatedValues = response.getHeaderValues("Encapsulated");
+        if(encapsulatedValues!=null)
+        for(String offset: encapsulatedValues) {
+        	
+        	String offsetParser[] = offset.split("=");
+        	
+        	String offsetLabel = offsetParser[0];
+        	
+        	int offsetValue = Integer.parseInt(offsetParser[1]);
+        	
+        	switch(lastOffsetLabel) {
+        		
+	        	case "req-hdr":
+	        		httpRequestHeaderSize = (offsetValue - lastOffsetValue);
+	        		break;
+	        		
+	        	case "res-hdr":
+	        		httpResponseHeaderSize = (offsetValue - lastOffsetValue);
+	        		break;
+	        		
+        	}
+        	
+        	lastOffsetLabel = offsetLabel;
+        	lastOffsetValue = offsetValue;
+        	
         }
         
-        if( cache.size() > 0 ) {
-        	response.setBody(cache.toByteArray());
+        byte[] parseContent = null;
+        
+        if( httpRequestHeaderSize > 0 ) {
+        	parseContent = new byte[httpRequestHeaderSize];
+        	is.read(parseContent);
+        	response.setHttpRequestHeader(parseContent);
+        }
+    	
+    	if( "req-body".equals(lastOffsetLabel) ) {
+        	cache = new ByteArrayOutputStream();
+        	readBody(is, cache);
+        	response.setHttpRequestBody(cache.toByteArray()); 
+    	}
+        
+        if( httpResponseHeaderSize > 0 ) {
+        	parseContent = new byte[httpResponseHeaderSize];
+        	is.read(parseContent);
+        	response.setHttpResponseHeader(parseContent);
+        }
+    	
+    	if( "res-body".equals(lastOffsetLabel) ) {
+        	cache = new ByteArrayOutputStream();
+        	readBody(is, cache);
+        	response.setHttpResponseBody(cache.toByteArray()); 
+    	}
+		
+	}
+	
+	private void readHeaders(InputStream is, OutputStream out) throws IOException {
+        
+        int reader = -1;
+        
+        int mark1 = -1, mark2 = -1, mark3 = -1, mark4 = -1;
+        
+        while((reader = is.read()) != -1) {
+        	
+        	mark1 = mark2;
+        	mark2 = mark3;
+        	mark3 = mark4;
+        	mark4 = reader;
+        	
+        	out.write(reader);
+        	
+        	if(        mark1 == '\r' 
+        			&& mark2 == '\n' 
+        			&& mark3 == '\r' 
+        			&& mark4 == '\n' ) {
+        		break;
+        	}
+        	
+        }
+		
+	}
+	
+	private void readBody(InputStream is, OutputStream out) throws IOException {
+        
+        int reader = -1;
+        
+        int mark1 = -1, mark2 = -1, mark3 = -1, mark4 = -1, mark5 = -1;
+        
+        while((reader = is.read()) != -1) {
+        	
+        	mark1 = mark2;
+        	mark2 = mark3;
+        	mark3 = mark4;
+        	mark4 = mark5;
+        	mark5 = reader;
+        	
+        	out.write(reader);
+        	
+        	if(        mark1 == '0'
+        			&& mark2 == '\r' 
+        			&& mark3 == '\n' 
+        			&& mark4 == '\r' 
+        			&& mark5 == '\n' ) {
+        		break;
+        	}
+        	
         }
 		
 	}
@@ -464,68 +609,5 @@ public class ICAPClient {
 		}
 		
 	}
-	
-//	private static class ResponseListener implements Runnable, Closeable {
-//		
-//		private InputStream is;
-//		
-//		ResponseListener(InputStream is) {
-//			this.is = is;
-//		}
-//		
-//		private boolean running = false;
-//		private boolean closed = false;
-//		
-//		public void close() throws IOException {
-//			synchronized(this) {
-//				if(running) running = false;
-//				if(!closed) {
-//					closed = true;
-//					is.close();
-//				}
-//			}
-//		}
-//		
-//		public void run() {
-//			
-//			running = true;
-//			
-//			int reader = -1;
-//			try {
-//				while((reader = is.read()) != -1) {
-//					System.err.print((char)reader);
-//				}
-//			} catch(Exception e) {
-////				Logger.getGlobal().log(Level.SEVERE, "Response Listener General Exception", e);
-//			}
-//			
-//			synchronized(this) {
-//				if(running) running = false;
-//				if(!closed) closed = true;
-//			}
-//			
-//		}
-//		
-//	}
-//	
-//	static {
-//		
-//		Logger.getGlobal().addHandler(new Handler() {
-//			
-//			public void publish(LogRecord record) {
-//				
-//			}
-//			
-//			public void flush() {
-//				
-//			}
-//			
-//			public void close() throws SecurityException {
-//				
-//			}
-//			
-//		});
-//		
-//	}
 	
 }
