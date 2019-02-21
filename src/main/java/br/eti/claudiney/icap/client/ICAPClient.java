@@ -80,7 +80,7 @@ public class ICAPClient {
         
         request.setHttpRequestHeader(requestHeader.getBytes());
         
-		return sendRequest(request);
+		return execute(request);
 
 	}
 	
@@ -141,7 +141,7 @@ public class ICAPClient {
         
         request.setHttpResponseHeader(responseHeader.getBytes());
         
-		return sendRequest(request);
+		return execute(request);
 
 	}
 	
@@ -163,6 +163,35 @@ public class ICAPClient {
         request.setHttpRequestHeader(requestHeader.getBytes());
 		
 		request.setHttpRequestBody(file);
+		
+		return virus_scan(request);
+		
+	}
+	
+	public ICAPResponse virus_scan(byte[] content) throws ICAPException {
+		return virus_scan(content, null);
+	}
+	
+	public ICAPResponse virus_scan(byte[] content, String resourceName) throws ICAPException {
+		
+		if(resourceName == null) resourceName = "content.data";
+		
+		String service = "virus_scan";
+		
+		ICAPRequest request = new ICAPRequest(service, Mode.REQMOD);
+		
+        // First part of header
+        String requestHeader 
+        		= "POST /" + resourceName + " HTTP/1.1"+END_LINE_DELIMITER
+        		+ "Host: localhost"+END_LINE_DELIMITER
+        		+ "User-Agent: "+USER_AGENT+END_LINE_DELIMITER
+        		+ "Content-Type: application/octet-stream"+END_LINE_DELIMITER
+        		+ "Content-Length: "+content.length+END_LINE_DELIMITER
+        		+ END_LINE_DELIMITER;
+		
+        request.setHttpRequestHeader(requestHeader.getBytes());
+		
+		request.setHttpRequestBody(content);
 		
 		return virus_scan(request);
 		
@@ -288,7 +317,7 @@ public class ICAPClient {
 			httpPort = Integer.valueOf(getICAPPort());
 		}
         
-		return sendRequest(request);
+		return execute(request);
 
 	}
 	
@@ -331,10 +360,10 @@ public class ICAPClient {
         
 	}
 	
-	public ICAPResponse sendRequest(ICAPRequest request) throws ICAPException {
+	public ICAPResponse execute(ICAPRequest request) throws ICAPException {
 		
 		try {
-			return makeRequest(request);
+			return performAdaptation(request);
 		}  catch(IOException e) {
 			throw new ICAPException(e);
 		}
@@ -346,7 +375,7 @@ public class ICAPClient {
 		return content;
 	}
 	
-	private ICAPResponse makeRequest(ICAPRequest request) throws IOException {
+	private ICAPResponse performAdaptation(ICAPRequest request) throws IOException {
         
         byte[] httpRequestHeader = getContentOrDefault(request.getHttpRequestHeader());
         byte[] httpRequestBody = getContentOrDefault(request.getHttpRequestBody());
@@ -412,12 +441,12 @@ public class ICAPClient {
         os.write(icapRequestHeader.getBytes());
         
         if( httpRequestHeader.length > 0 ) {
-        	info("\n### (send) HTTP REQUEST HEADER ###\n"+new String(httpRequestHeader));
+        	info("\n### (SEND) HTTP REQUEST HEADER ###\n"+new String(httpRequestHeader));
         	os.write(httpRequestHeader);
         }
         
         if( httpResponseHeader.length > 0 ) {
-        	info("\n### (send) HTTP RESPONSE HEADER ###\n"+new String(httpResponseHeader));
+        	info("\n### (SEND) HTTP RESPONSE HEADER ###\n"+new String(httpResponseHeader));
         	os.write(httpResponseHeader);
         }
         
@@ -429,11 +458,11 @@ public class ICAPClient {
         	os.write(content, 0, preview);
         	os.write(END_LINE_DELIMITER.getBytes());
         	
-        	if( content.length <= preview ){
-        		// Fim da transmissão
+        	if( content.length == preview ){
+        		// A transmissão coube no 'preview'; não há mais bytes para envio
         		os.write( ("0; ieof"+END_MESSAGE_DELIMITER).getBytes() );
-        	} else if (preview != 0){
-        		// Ainda tem mais para transmitir
+        	} else {
+        		// O 'preview' foi menor que o conteúdo total; alerta que há mais bytes para envio 
         		os.write( ("0"+END_MESSAGE_DELIMITER).getBytes() );
         	}
         	
@@ -527,7 +556,7 @@ public class ICAPClient {
         if( httpRequestHeaderSize > 0 ) {
         	parseContent = new byte[httpRequestHeaderSize];
         	is.read(parseContent);
-        	info("\n### (receive) HTTP REQUEST HEADER ###\n"+new String(parseContent));
+        	info("\n### (RECEIVE) HTTP REQUEST HEADER ###\n"+new String(parseContent));
         	response.setHttpRequestHeader(parseContent);
         }
     	
@@ -540,7 +569,7 @@ public class ICAPClient {
         if( httpResponseHeaderSize > 0 ) {
         	parseContent = new byte[httpResponseHeaderSize];
         	is.read(parseContent);
-        	info("\n### (receive) HTTP RESPONSE HEADER ###\n"+new String(parseContent));
+        	info("\n### (RECEIVE) HTTP RESPONSE HEADER ###\n"+new String(parseContent));
         	response.setHttpResponseHeader(parseContent);
         }
     	
