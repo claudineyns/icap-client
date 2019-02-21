@@ -125,7 +125,7 @@ public class ICAPResponse implements Serializable {
 	}
 	
 	public byte[] getHttpShrinkRequestBody() {
-		return shrinkHttpPayload(httpResponseBody);
+		return shrinkHttpPayload(httpRequestBody);
 	}
 	
 	void setHttpResponseHeader(byte[] httpResponseHeader) {
