@@ -18,6 +18,7 @@ public class ICAPResponse implements Serializable {
 	private Set<String> headers = new LinkedHashSet<>();
 	
 	private String protocol;
+	private String version;
 	private int status;
 	private String message;
 	
@@ -39,6 +40,14 @@ public class ICAPResponse implements Serializable {
 		return protocol;
 	}
 	
+	void setVersion(String version) {
+		this.version = version;
+	}
+	
+	public String getVersion() {
+		return version;
+	}
+	
 	void setStatus(int status) {
 		this.status = status;
 	}
@@ -53,6 +62,10 @@ public class ICAPResponse implements Serializable {
 	
 	public String getMessage() {
 		return message;
+	}
+	
+	public String recoverStatusLine() {
+		return "ICAP/"+getVersion()+" "+getStatus()+" "+getMessage();
 	}
 	
 	void addHeader(String header, String value) {
@@ -206,7 +219,7 @@ public class ICAPResponse implements Serializable {
 	
 	@Override
 	public String toString() {
-		return "Protocol="+protocol+"; Status="+status+"; Message="+message;
+		return recoverStatusLine();
 	}
 	
 }

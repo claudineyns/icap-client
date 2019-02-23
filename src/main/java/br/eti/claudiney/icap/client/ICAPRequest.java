@@ -32,7 +32,7 @@ public class ICAPRequest {
 		return mode;
 	}
 	
-	private int preview = 0;
+	private int preview = -1;
 	
 	public void setPreview(int preview) {
 		this.preview = preview;

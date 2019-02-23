@@ -23,9 +23,8 @@ public class ICAPClient {
 	private static final String VERSION = "1.0";
 	private static final String USER_AGENT = "Java-ICAP-Client/1.1";
 	private static final String END_LINE_DELIMITER = "\r\n";
-	private static final String END_MESSAGE_DELIMITER = "\r\n\r\n";
 	
-	private static Pattern LINE_STATUS_PATTERN = Pattern.compile("(ICAP\\/1.0)\\s(\\d{3})\\s(.*)");
+	private static Pattern LINE_STATUS_PATTERN = Pattern.compile("(ICAP)\\/(1.0)\\s(\\d{3})\\s(.*)");
 	
 	public ICAPClient(String host, int port) {
 		this.host = host;
@@ -67,6 +66,8 @@ public class ICAPClient {
               + "User-Agent: "+USER_AGENT+END_LINE_DELIMITER
               + "Encapsulated: null-body=0"+END_LINE_DELIMITER
               + END_LINE_DELIMITER;
+        
+        info("\n### (SEND) ICAP REQUEST ###\n"+requestHeader);
         
         os.write(requestHeader.getBytes());
         os.flush();
@@ -116,7 +117,7 @@ public class ICAPClient {
 		OutputStream os = socket.getOutputStream();
         
         int preview = request.getPreview();
-        if (content.length < request.getPreview()){
+        if( preview >= 0 && content.length < request.getPreview() ){
             preview = content.length;
         }
         
@@ -157,9 +158,11 @@ public class ICAPClient {
               + "Host: "+host+END_LINE_DELIMITER
               + "User-Agent: "+USER_AGENT+END_LINE_DELIMITER
               + "Allow: 204"+END_LINE_DELIMITER
-              + "Preview: "+preview+END_LINE_DELIMITER
+              + (preview >= 0 ? ("Preview: "+preview+END_LINE_DELIMITER):"")
               + "Encapsulated: "+encapsulated.toString()+END_LINE_DELIMITER
               + END_LINE_DELIMITER;
+        
+        info("\n### (SEND) ICAP REQUEST ###\n"+icapRequestHeader);
         
         os.write(icapRequestHeader.getBytes());
         
@@ -174,20 +177,50 @@ public class ICAPClient {
         }
         
         if( preview > 0 ) {
-	        
+        	
+        	info("\n### (SEND) ICAP PREVIEW: ###\n"+preview);
+        	
+        	/*
+        	 * Envia prévia
+        	 */
+        	
 	        os.write(Integer.toHexString(preview).getBytes());
 	        os.write(END_LINE_DELIMITER.getBytes());
-	        
         	os.write(content, 0, preview);
         	os.write(END_LINE_DELIMITER.getBytes());
-        	
+            
         	if( content.length == preview ){
-        		// A transmissão coube no 'preview'; não há mais bytes para envio
-        		os.write( ("0; ieof"+END_MESSAGE_DELIMITER).getBytes() );
+        		// Fim da transmissão TOTAL
+        		os.write( ("0; ieof"+END_LINE_DELIMITER+END_LINE_DELIMITER).getBytes() );
         	} else {
-        		// O 'preview' foi menor que o conteúdo total; alerta que há mais bytes para envio 
-        		os.write( ("0"+END_MESSAGE_DELIMITER).getBytes() );
+        		// Fim da transmissão do primeiro lote 
+        		os.write( ("0"+END_LINE_DELIMITER+END_LINE_DELIMITER).getBytes() );
         	}
+        	
+        } else if( preview == -1 ) {
+        	
+        	/*
+        	 * Envia tudo no primeiro lote
+        	 */
+        	
+	        os.write(Integer.toHexString(content.length).getBytes());
+	        os.write(END_LINE_DELIMITER.getBytes());
+        	os.write(content);
+        	os.write(END_LINE_DELIMITER.getBytes());
+        	os.write( ("0; ieof"+END_LINE_DELIMITER+END_LINE_DELIMITER).getBytes() );
+        	
+        } else {
+        	
+        	info("\n### (SEND) ICAP PREVIEW: ###\n"+preview);
+        	
+        	/*
+        	 * Não estou enviando prévia.
+        	 * Aguardar o OK (100-continue) do servidor.
+        	 * Enviar T-O-D-O o corpo da mensagem.
+        	 */
+        	
+        	// Transmite vazio (ou seja, vai somente header)
+    		os.write( ("0"+END_LINE_DELIMITER+END_LINE_DELIMITER).getBytes() );
         	
         }
         
@@ -198,20 +231,24 @@ public class ICAPClient {
         
         if( response.getStatus() == 100 /*continue*/ ) {
         	
+        	info("\n### (SEND) REMAINING HTTP BODY PAYLOAD ###");
+        	
         	int remaining = (content.length - preview);
+        	
             os.write(Integer.toHexString(remaining).getBytes());
             os.write(END_LINE_DELIMITER.getBytes());
-            
             os.write(content, preview, remaining);
             os.write(END_LINE_DELIMITER.getBytes());
             
-        	os.write( ("0"+END_MESSAGE_DELIMITER).getBytes() );
+            // Fim da transmissão do segundo lote
+        	os.write( ("0"+END_LINE_DELIMITER+END_LINE_DELIMITER).getBytes() );
         	
         	os.flush();
         	
         	response = new ICAPResponse();
             extractResponse(response, is);
-        	
+            info("\n### (RECEIVE) ICAP RESPONSE HEADER ###\n"+new String(httpResponseHeader));
+            
         }
         
         is.close();
@@ -358,15 +395,17 @@ public class ICAPClient {
 		
 	}
 	
-	private void extractHeaders(ICAPResponse reponse, String content) {
+	private void extractHeaders(ICAPResponse response, String content) {
 		
         String statusLine = content.substring(0, content.indexOf('\r'));
         
         Matcher matcher = LINE_STATUS_PATTERN.matcher(statusLine);
         if(matcher.matches()) {
-        	reponse.setProtocol(matcher.group(1));
-        	reponse.setStatus(Integer.parseInt(matcher.group(2)));
-        	reponse.setMessage(matcher.group(3));
+        	response.setProtocol(matcher.group(1));
+        	response.setVersion(matcher.group(2));
+        	response.setStatus(Integer.parseInt(matcher.group(3)));
+        	response.setMessage(matcher.group(4));
+        	info("\n### (RECEIVE) ICAP RESPONSE STATUS ###\n"+statusLine);
         }
         
         content = content.substring(content.indexOf('\r')+2);
@@ -449,7 +488,7 @@ public class ICAPClient {
         	}
         	
         	for(String v: headerValues) {
-        		reponse.addHeader(header, v.trim());
+        		response.addHeader(header, v.trim());
         	}
 			
 		}
