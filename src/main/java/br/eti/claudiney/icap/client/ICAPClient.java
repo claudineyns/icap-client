@@ -26,6 +26,8 @@ public class ICAPClient {
 	
 	private static Pattern LINE_STATUS_PATTERN = Pattern.compile("(ICAP)\\/(1.0)\\s(\\d{3})\\s(.*)");
 	
+	private static final int MAX_PACKET_SIZE = 65536;
+	
 	public ICAPClient(String host, int port) {
 		this.host = host;
 		this.port = port;
@@ -200,7 +202,7 @@ public class ICAPClient {
         } else if( preview == -1 ) {
         	
         	/*
-        	 * Envia tudo no primeiro lote
+        	 * Envia tudo em um unico lote
         	 */
         	
 	        os.write(Integer.toHexString(content.length).getBytes());
@@ -210,14 +212,6 @@ public class ICAPClient {
         	os.write( ("0; ieof"+END_LINE_DELIMITER+END_LINE_DELIMITER).getBytes() );
         	
         } else {
-        	
-        	info("\n### (SEND) ICAP PREVIEW: ###\n"+preview);
-        	
-        	/*
-        	 * Não estou enviando prévia.
-        	 * Aguardar o OK (100-continue) do servidor.
-        	 * Enviar T-O-D-O o corpo da mensagem.
-        	 */
         	
         	// Transmite vazio (ou seja, vai somente header)
     		os.write( ("0"+END_LINE_DELIMITER+END_LINE_DELIMITER).getBytes() );
@@ -235,10 +229,22 @@ public class ICAPClient {
         	
         	int remaining = (content.length - preview);
         	
-            os.write(Integer.toHexString(remaining).getBytes());
-            os.write(END_LINE_DELIMITER.getBytes());
-            os.write(content, preview, remaining);
-            os.write(END_LINE_DELIMITER.getBytes());
+        	while( remaining > 0 ) {
+        		
+        		int amount = remaining;
+        		if(amount > MAX_PACKET_SIZE) {
+        			amount = MAX_PACKET_SIZE;
+        		}
+        		
+	            os.write(Integer.toHexString(amount).getBytes());
+	            os.write(END_LINE_DELIMITER.getBytes());
+	            
+	            os.write(content, preview, amount);
+	            os.write(END_LINE_DELIMITER.getBytes());
+	            
+	            remaining -= amount;
+	            
+        	}
             
             // Fim da transmissão do segundo lote
         	os.write( ("0"+END_LINE_DELIMITER+END_LINE_DELIMITER).getBytes() );
