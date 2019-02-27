@@ -42,26 +42,6 @@ public class ICAPRequest {
 		return preview;
 	}
 	
-	private String httpHost;
-	
-	public void setHttpHost(String httpHost) {
-		this.httpHost = httpHost;
-	}
-	
-	public String getHttpHost() {
-		return httpHost;
-	}
-	
-	private Integer httpPort = null;
-	
-	public void setHttpPort(int httpPort) {
-		this.httpPort = Integer.valueOf(httpPort);
-	}
-	
-	public Integer getHttpPort() {
-		return httpPort;
-	}
-	
 	private byte[] httpRequestHeader;
 	
 	public byte[] getHttpRequestHeader() {

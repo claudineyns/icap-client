@@ -25,7 +25,26 @@
 		
 	</dependencies>
 	
+	<developers>
+		<developer>
+			<id>claudineynascimento</id>
+			<name>Claudiney Nascimento</name>
+			<email>contato@claudiney.info</email>
+			<url>https://github.com/claudineynascimento/</url>
+		</developer>
+	</developers>
+	
+	<url>https://github.com/claudineynascimento/icap-client</url>
+	
+	<licenses>
+		<license>
+			<name>MIT License</name>
+			<url>https://raw.githubusercontent.com/claudineynascimento/icap-client/master/LICENSE</url>
+		</license>
+	</licenses>
+	
 	<build>
+		
 		<plugins>
 			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -36,6 +55,7 @@
 				</configuration>
 			</plugin>
 		</plugins>
+		
 	</build>
 	
 </project>
