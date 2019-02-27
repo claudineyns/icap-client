@@ -1,4 +1,4 @@
-package br.eti.claudiney.icap.client;
+package net.rfc3507.client;
 
 @SuppressWarnings("serial")
 public class ICAPException extends Exception {

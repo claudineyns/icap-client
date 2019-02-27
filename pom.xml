@@ -3,12 +3,12 @@
 	
 	<modelVersion>4.0.0</modelVersion>
 	
-	<groupId>br.eti.claudiney.icap</groupId>
+	<groupId>net.rfc3507</groupId>
 	<artifactId>icap-client</artifactId>
-	<version>1.0.0</version>
+	<version>1.0.0-RC</version>
 	
 	<name>icap-client</name>
-	<description>icap-client</description>
+	<description>ICAP Client Implementation for RFC 3507</description>
 	
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
