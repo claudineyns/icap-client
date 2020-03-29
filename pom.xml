@@ -28,19 +28,19 @@
 	
 	<developers>
 		<developer>
-			<id>claudineynascimento</id>
+			<id>claudineyns</id>
 			<name>Claudiney Nascimento</name>
 			<email>contato@claudiney.info</email>
-			<url>https://github.com/claudineynascimento/</url>
+			<url>https://github.com/claudineyns/</url>
 		</developer>
 	</developers>
 	
-	<url>https://github.com/claudineynascimento/icap-client</url>
+	<url>https://github.com/claudineyns/icap-client</url>
 	
 	<licenses>
 		<license>
 			<name>MIT License</name>
-			<url>https://raw.githubusercontent.com/claudineynascimento/icap-client/master/LICENSE</url>
+			<url>https://raw.githubusercontent.com/claudineyns/icap-client/master/LICENSE</url>
 		</license>
 	</licenses>
 	
