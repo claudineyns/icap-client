@@ -2,18 +2,21 @@ package net.rfc3507.client;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @SuppressWarnings("serial")
 public class ICAPResponse implements Serializable {
 	
-	private Map<String, List<String>> headerEntries = new LinkedHashMap<>(); 
+	private Map<String, List<String>> headerEntries = new TreeMap<>(String.CASE_INSENSITIVE_ORDER); 
 
 	private Set<String> headers = new LinkedHashSet<>();
 	
@@ -141,8 +144,54 @@ public class ICAPResponse implements Serializable {
 		return shrinkHttpPayload(httpRequestBody);
 	}
 	
+	public static class ResponseHeader {
+		final static Pattern statusLinePattern=Pattern.compile("\\S+\\s(\\d{3})\\s(.*)");
+		final static Pattern headersPattern=Pattern.compile("(.*):\\s(.*)");
+		
+		public ResponseHeader(byte[] httpResponseHeader) {
+			final String data=new String(httpResponseHeader);
+			Matcher matcher = statusLinePattern.matcher(data);
+		    if(matcher.find()) {
+		    	status=Integer.parseInt(matcher.group(1));
+		    	message=matcher.group(2);
+		    }
+		    headerEntries.clear();
+		    matcher = headersPattern.matcher(data);
+		    while (matcher.find()) {
+		    	List<String> values=headerEntries.get(matcher.group(1));
+		    	if (values==null) {
+		    		values=new ArrayList<String>(1);
+		    	}
+		    	values.add(matcher.group(2));
+		    	headerEntries.put(matcher.group(1), values);
+		    }
+		}
+
+		int status=403;
+		public int getStatus() {
+			return this.status; 
+		}
+		
+		String message="Forbidden";
+		public String getMessage() {
+			return this.message; 
+		}
+		
+		Map<String, List<String>> headerEntries = new TreeMap<>(String.CASE_INSENSITIVE_ORDER); 
+		public Map<String, List<String>> getHeaderEntries() {
+			return Collections.unmodifiableMap(headerEntries);
+		}
+	}
+	
+	ResponseHeader responseHeader=null;
+	public ResponseHeader getResponseHeader() {
+		return responseHeader;
+	}
+	
+	
 	void setHttpResponseHeader(byte[] httpResponseHeader) {
 		this.httpResponseHeader = httpResponseHeader;
+		this.responseHeader=new ResponseHeader(httpResponseHeader);
 	}
 	
 	public byte[] getHttpResponseHeader() {
@@ -221,5 +270,6 @@ public class ICAPResponse implements Serializable {
 	public String toString() {
 		return recoverStatusLine();
 	}
+	
 	
 }
