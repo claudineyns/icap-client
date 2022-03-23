@@ -54,12 +54,31 @@ public class ICAPClient {
 		}
 		
 	}
+	int connect_timeout=5000;
+	public int getConnectTimeout() {
+		return connect_timeout;
+	}
+
+	public void setConnectTimeout(int connect_timeout) {
+		this.connect_timeout = connect_timeout;
+	}
+
+	int read_timeout=15000;
+	public int getReadTimeout() {
+		return read_timeout;
+	}
+
+	public void setReadTimeout(int read_timeout) {
+		this.read_timeout = read_timeout;
+	}
+	
 	
 	private ICAPResponse sendOptions(String icapService) throws IOException {
 		
 		Socket socket = new Socket(host, port);
+		socket.setSoTimeout(read_timeout);
 		
-		InputStream is = socket.getInputStream();
+		InputStream is = socket.getInputStream(); 
 		OutputStream os = socket.getOutputStream();
 		
         String requestHeader = 
@@ -70,7 +89,7 @@ public class ICAPClient {
               + END_LINE_DELIMITER;
         
         info("\n### (SEND) ICAP REQUEST ###\n"+requestHeader);
-        
+        socket.connect(socket.getRemoteSocketAddress(), connect_timeout);
         os.write(requestHeader.getBytes());
         os.flush();
         
@@ -182,9 +201,6 @@ public class ICAPClient {
         	
         	info("\n### (SEND) ICAP PREVIEW: ###\n"+preview);
         	
-        	/*
-        	 * Envia prévia
-        	 */
         	
 	        os.write(Integer.toHexString(preview).getBytes());
 	        os.write(END_LINE_DELIMITER.getBytes());
@@ -192,10 +208,8 @@ public class ICAPClient {
         	os.write(END_LINE_DELIMITER.getBytes());
             
         	if( content.length == preview ){
-        		// Fim da transmissão TOTAL
         		os.write( ("0; ieof"+END_LINE_DELIMITER+END_LINE_DELIMITER).getBytes() );
         	} else {
-        		// Fim da transmissão do primeiro lote 
         		os.write( ("0"+END_LINE_DELIMITER+END_LINE_DELIMITER).getBytes() );
         	}
         	
@@ -246,7 +260,6 @@ public class ICAPClient {
 	            
         	}
             
-            // Fim da transmissão do segundo lote
         	os.write( ("0"+END_LINE_DELIMITER+END_LINE_DELIMITER).getBytes() );
         	
         	os.flush();
@@ -453,7 +466,6 @@ public class ICAPClient {
 				continue;
 				
 			case '\t':
-				// força a continuação do valor anterior em andamento
 				breakLine = false;
 				side = 2;
 				t_value.append('\n');
