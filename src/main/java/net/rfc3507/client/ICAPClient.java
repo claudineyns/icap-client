@@ -54,12 +54,31 @@ public class ICAPClient {
 		}
 		
 	}
+	int connect_timeout=5000;
+	public int getConnectTimeout() {
+		return connect_timeout;
+	}
+
+	public void setConnectTimeout(int connect_timeout) {
+		this.connect_timeout = connect_timeout;
+	}
+
+	int read_timeout=15000;
+	public int getReadTimeout() {
+		return read_timeout;
+	}
+
+	public void setReadTimeout(int read_timeout) {
+		this.read_timeout = read_timeout;
+	}
+	
 	
 	private ICAPResponse sendOptions(String icapService) throws IOException {
 		
 		Socket socket = new Socket(host, port);
+		socket.setSoTimeout(read_timeout);
 		
-		InputStream is = socket.getInputStream();
+		InputStream is = socket.getInputStream(); 
 		OutputStream os = socket.getOutputStream();
 		
         String requestHeader = 
@@ -70,7 +89,7 @@ public class ICAPClient {
               + END_LINE_DELIMITER;
         
         info("\n### (SEND) ICAP REQUEST ###\n"+requestHeader);
-        
+        socket.connect(socket.getRemoteSocketAddress(), connect_timeout);
         os.write(requestHeader.getBytes());
         os.flush();
         
