@@ -182,9 +182,6 @@ public class ICAPClient {
         	
         	info("\n### (SEND) ICAP PREVIEW: ###\n"+preview);
         	
-        	/*
-        	 * Envia prévia
-        	 */
         	
 	        os.write(Integer.toHexString(preview).getBytes());
 	        os.write(END_LINE_DELIMITER.getBytes());
@@ -192,10 +189,8 @@ public class ICAPClient {
         	os.write(END_LINE_DELIMITER.getBytes());
             
         	if( content.length == preview ){
-        		// Fim da transmissão TOTAL
         		os.write( ("0; ieof"+END_LINE_DELIMITER+END_LINE_DELIMITER).getBytes() );
         	} else {
-        		// Fim da transmissão do primeiro lote 
         		os.write( ("0"+END_LINE_DELIMITER+END_LINE_DELIMITER).getBytes() );
         	}
         	
@@ -246,7 +241,6 @@ public class ICAPClient {
 	            
         	}
             
-            // Fim da transmissão do segundo lote
         	os.write( ("0"+END_LINE_DELIMITER+END_LINE_DELIMITER).getBytes() );
         	
         	os.flush();
@@ -453,7 +447,6 @@ public class ICAPClient {
 				continue;
 				
 			case '\t':
-				// força a continuação do valor anterior em andamento
 				breakLine = false;
 				side = 2;
 				t_value.append('\n');
