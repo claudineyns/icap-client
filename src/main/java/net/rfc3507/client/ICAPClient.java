@@ -4,7 +4,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +57,7 @@ public class ICAPClient {
 		}
 		
 	}
-	int connect_timeout=5000;
+	int connect_timeout = 5000;
 	public int getConnectTimeout() {
 		return connect_timeout;
 	}
@@ -63,7 +66,7 @@ public class ICAPClient {
 		this.connect_timeout = connect_timeout;
 	}
 
-	int read_timeout=15000;
+	int read_timeout = 15000;
 	public int getReadTimeout() {
 		return read_timeout;
 	}
@@ -72,12 +75,18 @@ public class ICAPClient {
 		this.read_timeout = read_timeout;
 	}
 	
-	
 	private ICAPResponse sendOptions(String icapService) throws IOException {
-		
-		Socket socket = new Socket(host, port);
+
+		final InetAddress inetAddress = InetAddress.getByName(this.host);
+		final SocketAddress socketAddress = new InetSocketAddress(inetAddress, this.port);
+
+		final Socket socket = new Socket(); 
 		socket.setSoTimeout(read_timeout);
+		socket.connect(socketAddress, connect_timeout);
 		
+        System.out.println("Inet address: "+socket.getLocalSocketAddress());  
+        System.out.println("Remote Inet address: "+socket.getRemoteSocketAddress());
+        
 		InputStream is = socket.getInputStream(); 
 		OutputStream os = socket.getOutputStream();
 		
@@ -89,7 +98,7 @@ public class ICAPClient {
               + END_LINE_DELIMITER;
         
         info("\n### (SEND) ICAP REQUEST ###\n"+requestHeader);
-        socket.connect(socket.getRemoteSocketAddress(), connect_timeout);
+
         os.write(requestHeader.getBytes());
         os.flush();
         

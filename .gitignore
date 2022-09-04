@@ -1,0 +1,8 @@
+# Maven configurations
+/target/
+
+# Eclipse platform-specific configurations
+.classpath
+.project
+.settings/
+
