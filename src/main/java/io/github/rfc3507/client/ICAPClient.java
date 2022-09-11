@@ -1,4 +1,4 @@
-package net.rfc3507.client;
+package io.github.rfc3507.client;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -12,16 +12,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ICAPClient {
+import io.github.rfc3507.utilities.LogService;
 
-	private Logger logger = Logger.getLogger(getClass().getCanonicalName());
-	
-	private String host;
-	private int port = 0;
+public class ICAPClient {
 	
 	private static final String VERSION = "1.0";
 	private static final String USER_AGENT = "Java-ICAP-Client/1.1";
@@ -31,32 +27,36 @@ public class ICAPClient {
 	
 	private static final int MAX_PACKET_SIZE = 65536;
 	
+	private String host;
+	private int port = 0;
+	
+	private final LogService logger = LogService.getInstance("ICAP-CLIENT");
+
 	public ICAPClient(String host, int port) {
 		this.host = host;
 		this.port = port;
 	}
 	
-	public String getICAPHost() {
+	public String getIcapHost() {
 		return host;
 	}
 	
-	public int getICAPPort() {
+	public int getIcapPort() {
 		return port;
 	}
 	
-	public static String getICAPVersion() {
+	public static String getIcapVersion() {
 		return VERSION;
 	}
 	
 	public ICAPResponse options(String icapService) throws ICAPException {
-		
 		try {
 			return sendOptions(icapService);
 		} catch(IOException e){
 			throw new ICAPException(e);
 		}
-		
 	}
+
 	int connect_timeout = 5000;
 	public int getConnectTimeout() {
 		return connect_timeout;
@@ -75,18 +75,24 @@ public class ICAPClient {
 		this.read_timeout = read_timeout;
 	}
 	
-	private ICAPResponse sendOptions(String icapService) throws IOException {
-
+	private Socket connect() throws IOException {
 		final InetAddress inetAddress = InetAddress.getByName(this.host);
 		final SocketAddress socketAddress = new InetSocketAddress(inetAddress, this.port);
+
+		logger.info("Connecting...");
 
 		final Socket socket = new Socket(); 
 		socket.setSoTimeout(read_timeout);
 		socket.connect(socketAddress, connect_timeout);
+
+		logger.info("Connected");
 		
-        System.out.println("Inet address: "+socket.getLocalSocketAddress());  
-        System.out.println("Remote Inet address: "+socket.getRemoteSocketAddress());
-        
+		return socket;
+	}
+	
+	private ICAPResponse sendOptions(String icapService) throws IOException {
+		final Socket socket = connect();
+
 		InputStream is = socket.getInputStream(); 
 		OutputStream os = socket.getOutputStream();
 		
@@ -96,14 +102,12 @@ public class ICAPClient {
               + "User-Agent: "+USER_AGENT+END_LINE_DELIMITER
               + "Encapsulated: null-body=0"+END_LINE_DELIMITER
               + END_LINE_DELIMITER;
-        
-        info("\n### (SEND) ICAP REQUEST ###\n"+requestHeader);
 
+        logger.info("\n{}", requestHeader);
         os.write(requestHeader.getBytes());
         os.flush();
-        
+
         ICAPResponse options = new ICAPResponse();
-        
         extractResponse(options, is);
         
         is.close();
@@ -111,17 +115,14 @@ public class ICAPClient {
         socket.close();
         
         return options;
-        
 	}
 	
 	public ICAPResponse execute(ICAPRequest request) throws ICAPException {
-		
 		try {
 			return performAdaptation(request);
 		}  catch(IOException e) {
 			throw new ICAPException(e);
 		}
-		
 	}
 	
 	private static byte[] getContentOrDefault(byte[] content) {
@@ -130,28 +131,26 @@ public class ICAPClient {
 	}
 	
 	private ICAPResponse performAdaptation(ICAPRequest request) throws IOException {
-        
-        byte[] httpRequestHeader = getContentOrDefault(request.getHttpRequestHeader());
-        byte[] httpRequestBody = getContentOrDefault(request.getHttpRequestBody());
-        byte[] httpResponseHeader = getContentOrDefault(request.getHttpResponseHeader());
-        byte[] httpResponseBody = getContentOrDefault(request.getHttpResponseBody());
+        final byte[] httpRequestHeader = getContentOrDefault(request.getHttpRequestHeader());
+        final byte[] httpRequestBody = getContentOrDefault(request.getHttpRequestBody());
+        final byte[] httpResponseHeader = getContentOrDefault(request.getHttpResponseHeader());
+        final byte[] httpResponseBody = getContentOrDefault(request.getHttpResponseBody());
         
         byte[] content = httpRequestBody;
         if(content.length == 0) {
         	content = httpResponseBody;
         }
         
-		Socket socket = new Socket(host, port);
-		
-		InputStream is = socket.getInputStream();
-		OutputStream os = socket.getOutputStream();
+		final Socket socket = connect();
+		final InputStream is = socket.getInputStream();
+		final OutputStream os = socket.getOutputStream();
         
         int preview = request.getPreview();
         if( preview >= 0 && content.length < request.getPreview() ){
             preview = content.length;
         }
         
-        StringBuilder encapsulated = new StringBuilder();
+        final StringBuilder encapsulated = new StringBuilder();
         int encapsulatedOffset = 0;
         
         if(httpRequestHeader.length > 0) {
@@ -183,7 +182,7 @@ public class ICAPClient {
         	encapsulated.append("null-body="+encapsulatedOffset);
         }
 		
-        String icapRequestHeader = 
+        final String icapRequestHeader = 
         		request.getMode().name()+" icap://"+host+"/"+request.getService()+" ICAP/"+VERSION+END_LINE_DELIMITER
               + "Host: "+host+END_LINE_DELIMITER
               + "User-Agent: "+USER_AGENT+END_LINE_DELIMITER
@@ -192,24 +191,19 @@ public class ICAPClient {
               + "Encapsulated: "+encapsulated.toString()+END_LINE_DELIMITER
               + END_LINE_DELIMITER;
         
-        info("\n### (SEND) ICAP REQUEST ###\n"+icapRequestHeader);
-        
+        logger.info("\n{}", icapRequestHeader);
+
         os.write(icapRequestHeader.getBytes());
         
         if( httpRequestHeader.length > 0 ) {
-        	info("\n### (SEND) HTTP REQUEST HEADER ###\n"+new String(httpRequestHeader));
         	os.write(httpRequestHeader);
         }
         
         if( httpResponseHeader.length > 0 ) {
-        	info("\n### (SEND) HTTP RESPONSE HEADER ###\n"+new String(httpResponseHeader));
         	os.write(httpResponseHeader);
         }
         
         if( preview > 0 ) {
-        	
-        	info("\n### (SEND) ICAP PREVIEW: ###\n"+preview);
-        	
         	
 	        os.write(Integer.toHexString(preview).getBytes());
 	        os.write(END_LINE_DELIMITER.getBytes());
@@ -248,8 +242,6 @@ public class ICAPClient {
         
         if( response.getStatus() == 100 /*continue*/ ) {
         	
-        	info("\n### (SEND) REMAINING HTTP BODY PAYLOAD ###");
-        	
         	int remaining = (content.length - preview);
         	
         	while( remaining > 0 ) {
@@ -275,7 +267,6 @@ public class ICAPClient {
         	
         	response = new ICAPResponse();
             extractResponse(response, is);
-            info("\n### (RECEIVE) ICAP RESPONSE HEADER ###\n"+new String(httpResponseHeader));
             
         }
         
@@ -284,8 +275,11 @@ public class ICAPClient {
         socket.close();
         
         return response;
-        
 	}
+	
+	static final int ICAP_STATUS_CONTINUE = 100;
+	static final int ICAP_STATUS_NO_CONTENT = 204;
+	static final int ICAP_STATUS_REQUEST_FAILURE_FAMILY = 400;
 	
 	private void extractResponse(
 			ICAPResponse response, 
@@ -294,14 +288,12 @@ public class ICAPClient {
 		ByteArrayOutputStream cache = new ByteArrayOutputStream();
 		readHeaders(is, cache);
         
-        String icapResponseHeaders = 
-        		new String(cache.toByteArray(), "UTF-8");
-        
+        final String icapResponseHeaders = new String(cache.toByteArray(), "UTF-8");
         extractHeaders(response, icapResponseHeaders);
         
-        if( response.getStatus() == 100 
-        		|| response.getStatus() == 204 
-        		|| response.getStatus() > 400 ) {
+        if( response.getStatus() == ICAP_STATUS_CONTINUE 
+        		|| response.getStatus() == ICAP_STATUS_NO_CONTENT 
+        		|| response.getStatus() > ICAP_STATUS_REQUEST_FAILURE_FAMILY ) {
         	return;
         }
 
@@ -344,7 +336,6 @@ public class ICAPClient {
         if( httpRequestHeaderSize > 0 ) {
         	parseContent = new byte[httpRequestHeaderSize];
         	is.read(parseContent);
-        	info("\n### (RECEIVE) HTTP REQUEST HEADER ###\n"+new String(parseContent));
         	response.setHttpRequestHeader(parseContent);
         }
     	
@@ -357,7 +348,6 @@ public class ICAPClient {
         if( httpResponseHeaderSize > 0 ) {
         	parseContent = new byte[httpResponseHeaderSize];
         	is.read(parseContent);
-        	info("\n### (RECEIVE) HTTP RESPONSE HEADER ###\n"+new String(parseContent));
         	response.setHttpResponseHeader(parseContent);
         }
     	
@@ -370,62 +360,65 @@ public class ICAPClient {
 	}
 	
 	private void readHeaders(InputStream is, OutputStream out) throws IOException {
-        
-        int reader = -1;
-        
-        int mark1 = -1, mark2 = -1, mark3 = -1, mark4 = -1;
-        
-        while((reader = is.read()) != -1) {
+        int octet = -1;
+
+        int octet0 = -1;
+        int octet1 = -1;
+        int octet2 = -1;
+        int octet3 = -1;
+
+        while((octet = is.read()) != -1) {
+        	octet0 = octet1;
+        	octet1 = octet2;
+        	octet2 = octet3;
+        	octet3 = octet;
+
+        	out.write(octet);
         	
-        	mark1 = mark2;
-        	mark2 = mark3;
-        	mark3 = mark4;
-        	mark4 = reader;
-        	
-        	out.write(reader);
-        	
-        	if(        mark1 == '\r' 
-        			&& mark2 == '\n' 
-        			&& mark3 == '\r' 
-        			&& mark4 == '\n' ) {
+        	if(		octet0 == '\r' 
+        		&&	octet1 == '\n' 
+        		&&	octet2 == '\r' 
+        		&&	octet3 == '\n' ) {
         		break;
         	}
-        	
+
         }
 		
 	}
 	
 	private void readBody(InputStream is, OutputStream out) throws IOException {
+        int octet = -1;
         
-        int reader = -1;
-        
-        int mark1 = -1, mark2 = -1, mark3 = -1, mark4 = -1, mark5 = -1;
-        
-        while((reader = is.read()) != -1) {
+        int octet0 = -1;
+        int octet1 = -1;
+        int octet2 = -1;
+        int octet3 = -1;
+        int octet4 = -1;
+
+        while((octet = is.read()) != -1) {
         	
-        	mark1 = mark2;
-        	mark2 = mark3;
-        	mark3 = mark4;
-        	mark4 = mark5;
-        	mark5 = reader;
+        	octet0 = octet1;
+        	octet1 = octet2;
+        	octet2 = octet3;
+        	octet3 = octet4;
+        	octet4 = octet;
         	
-        	out.write(reader);
+        	out.write(octet);
         	
-        	if(        mark1 == '0'
-        			&& mark2 == '\r' 
-        			&& mark3 == '\n' 
-        			&& mark4 == '\r' 
-        			&& mark5 == '\n' ) {
+        	if(        octet0 == '0'
+        			&& octet1 == '\r' 
+        			&& octet2 == '\n' 
+        			&& octet3 == '\r' 
+        			&& octet4 == '\n' ) {
         		break;
         	}
         	
         }
 		
 	}
-	
+
 	private void extractHeaders(ICAPResponse response, String content) {
-		
-        String statusLine = content.substring(0, content.indexOf('\r'));
+        final String statusLine = content.substring(0, content.indexOf('\r'));
         
         Matcher matcher = LINE_STATUS_PATTERN.matcher(statusLine);
         if(matcher.matches()) {
@@ -433,17 +426,19 @@ public class ICAPClient {
         	response.setVersion(matcher.group(2));
         	response.setStatus(Integer.parseInt(matcher.group(3)));
         	response.setMessage(matcher.group(4));
-        	info("\n### (RECEIVE) ICAP RESPONSE STATUS ###\n"+statusLine);
         }
         
         content = content.substring(content.indexOf('\r')+2);
         
 		Map<StringBuilder, StringBuilder> extraction = new LinkedHashMap<>();
 		
+		final byte SIDE_HEADER = 1;
+		final byte SIDE_VALUE = 2;
+
 		StringBuilder t_header = new StringBuilder("");
 		StringBuilder t_value = null;
 		char[] raw = content.toCharArray();
-		byte side = 1; //1=header; 2=value
+		byte side = SIDE_HEADER;
 		boolean breakLine = true;
 		boolean incomplete = false;
 		
@@ -454,7 +449,7 @@ public class ICAPClient {
 			switch(c) {
 			case ':': 
 				breakLine = false;
-				side=2;
+				side = SIDE_VALUE;
 				continue;
 				
 			case '\r':
@@ -469,28 +464,28 @@ public class ICAPClient {
 					continue;
 				}
 				breakLine = true;
-				side = 1;
+				side = SIDE_HEADER;
 				extraction.put(t_header, t_value);
 				t_header = new StringBuilder("");
 				continue;
 				
 			case '\t':
 				breakLine = false;
-				side = 2;
+				side = SIDE_VALUE;
 				t_value.append('\n');
 				incomplete = true;
 				break;
 				
 			default:
 				if(breakLine) {
-					side = 1;
+					side = SIDE_HEADER;
 					incomplete = false;
 					breakLine = false;
 					t_value = new StringBuilder("");
 				}
 			}
 			
-			if(side == 1) {
+			if(side == SIDE_HEADER) {
 				t_header.append(c);
 			} else {
 				if(c == ' ' && t_value.length() == 0) {
@@ -520,10 +515,6 @@ public class ICAPClient {
 			
 		}
 		
-	}
-	
-	private void info(Object message) {
-		logger.info(message.toString());
 	}
 	
 }

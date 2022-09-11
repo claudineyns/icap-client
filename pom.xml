@@ -1,62 +1,76 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-	
-	<modelVersion>4.0.0</modelVersion>
-	
-	<groupId>net.rfc3507</groupId>
-	<artifactId>icap-client</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
-	
-	<name>icap-client</name>
-	<description>ICAP Client Implementation for RFC 3507</description>
-	
-	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-	</properties>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-	<dependencies>
-		
-		<!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
-		<dependency>
-			<groupId>commons-io</groupId>
-			<artifactId>commons-io</artifactId>
-			<version>2.7</version>
-		</dependency>
-		
-	</dependencies>
-	
-	<developers>
-		<developer>
-			<id>claudineyns</id>
-			<name>Claudiney Nascimento</name>
-			<email>contato@claudiney.info</email>
-			<url>https://github.com/claudineyns/</url>
-		</developer>
-	</developers>
-	
-	<url>https://github.com/claudineyns/icap-client</url>
-	
-	<licenses>
-		<license>
-			<name>MIT License</name>
-			<url>https://raw.githubusercontent.com/claudineyns/icap-client/master/LICENSE</url>
-		</license>
-	</licenses>
-	
-	<build>
-		
-		<plugins>
-			<plugin>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.3</version>
-				<configuration>
-					<source>1.8</source>
-					<target>1.8</target>
-				</configuration>
-			</plugin>
-		</plugins>
-		
-	</build>
-	
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>net.rfc3507</groupId>
+  <artifactId>icap-client</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+
+  <name>icap-client</name>
+  <description>ICAP Client Implementation for RFC 3507</description>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <dependencies>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>5.8.1</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>2.7</version>
+    </dependency>
+
+  </dependencies>
+
+  <developers>
+    <developer>
+      <id>claudineyns</id>
+      <name>Claudiney Nascimento</name>
+      <email>contato@claudiney.info</email>
+      <url>https://github.com/claudineyns/</url>
+    </developer>
+  </developers>
+
+  <url>https://github.com/claudineyns/icap-client</url>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://raw.githubusercontent.com/claudineyns/icap-client/master/LICENSE</url>
+    </license>
+  </licenses>
+
+  <build>
+
+    <plugins>
+    
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.3</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.0.0-M7</version>
+      </plugin>
+
+    </plugins>
+
+  </build>
+
 </project>

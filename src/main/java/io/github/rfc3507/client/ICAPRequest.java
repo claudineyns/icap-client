@@ -1,4 +1,4 @@
-package net.rfc3507.client;
+package io.github.rfc3507.client;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;

@@ -43,3 +43,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 - [icap-client]
   Client socket connection error
+
+
+## [Unrelease] - 2022-09-11
+ 
+### Added
+
+- [icap-client]
+  Add LogService utility
+  Add unit tests
+
+### Changed
+
+- [icap-client]
+  base package from "net.rfc3507" to "io.github.rfc3507"
