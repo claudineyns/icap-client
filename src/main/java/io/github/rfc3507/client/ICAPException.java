@@ -1,4 +1,4 @@
-package net.rfc3507.client;
+package io.github.rfc3507.client;
 
 @SuppressWarnings("serial")
 public class ICAPException extends Exception {
