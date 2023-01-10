@@ -1,13 +1,10 @@
 package io.github.rfc3507.client;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-
-import org.apache.commons.io.IOUtils;
 
 public class ICAPRequest {
 
@@ -19,9 +16,13 @@ public class ICAPRequest {
 	
 	private Mode mode;
 	
-	public ICAPRequest(String service, Mode mode) {
+	private ICAPRequest(String service, Mode mode) {
 		this.service = service;
 		this.mode = mode;
+	}
+
+	public static ICAPRequest instance(String service, Mode mode) {
+		return new ICAPRequest(service, mode);
 	}
 	
 	public String getService() {
@@ -34,8 +35,9 @@ public class ICAPRequest {
 	
 	private int preview = -1;
 	
-	public void setPreview(int preview) {
+	public ICAPRequest setPreview(int preview) {
 		this.preview = preview;
+		return this;
 	}
 	
 	public int getPreview() {
@@ -48,22 +50,26 @@ public class ICAPRequest {
 		return httpRequestHeader;
 	}
 	
-	public void setHttpRequestHeader(byte[] httpRequestHeader) {
+	public ICAPRequest setHttpRequestHeader(byte[] httpRequestHeader) {
 		this.httpRequestHeader = httpRequestHeader;
+		return this;
 	}
 	
 	private byte[] httpRequestBody;
 	
-	public void setHttpRequestBody(byte[] httpRequestBody) {
+	public ICAPRequest setHttpRequestBody(byte[] httpRequestBody) {
 		this.httpRequestBody = httpRequestBody;
+		return this;
 	}
 	
-	public void setHttpRequestBody(File body) throws ICAPException {
+	public ICAPRequest setHttpRequestBody(File body) throws ICAPException {
 		this.httpRequestBody = readFile(body);
+		return this;
 	}
 	
-	public void setHttpRequestBody(URL resource) throws ICAPException {
+	public ICAPRequest setHttpRequestBody(URL resource) throws ICAPException {
 		this.httpRequestBody = readURL(resource);
+		return this;
 	}
 	
 	public byte[] getHttpRequestBody() {
@@ -76,22 +82,26 @@ public class ICAPRequest {
 		return httpResponseHeader;
 	}
 	
-	public void setHttpResponseHeader(byte[] httpResponseHeader) {
+	public ICAPRequest setHttpResponseHeader(byte[] httpResponseHeader) {
 		this.httpResponseHeader = httpResponseHeader;
+		return this;
 	}
 	
 	private byte[] httpResponseBody;
 	
-	public void setHttpResponseBody(byte[] httpResponseBody) {
+	public ICAPRequest setHttpResponseBody(byte[] httpResponseBody) {
 		this.httpResponseBody = httpResponseBody;
+		return this;
 	}
 	
-	public void setHttpResponseBody(File body) throws ICAPException {
+	public ICAPRequest setHttpResponseBody(File body) throws ICAPException {
 		this.httpResponseBody = readFile(body);
+		return this;
 	}
 	
-	public void setHttpResponseBody(URL resource) throws ICAPException {
+	public ICAPRequest setHttpResponseBody(URL resource) throws ICAPException {
 		this.httpResponseBody = readURL(resource);
+		return this;
 	}
 	
 	public byte[] getHttpResponseBody() {
@@ -100,8 +110,9 @@ public class ICAPRequest {
 	
 	private String resourceName;
 	
-	public void setResourceName(String resourceName) {
+	public ICAPRequest setResourceName(String resourceName) {
 		this.resourceName = resourceName;
+		return this;
 	}
 	
 	public String getResourceName() {
@@ -109,45 +120,19 @@ public class ICAPRequest {
 	}
 	
 	private byte[] readFile(File body) throws ICAPException {
-		
-		InputStream is = null;
-		try {
-			is = new FileInputStream(body);
+		try(final InputStream is = new FileInputStream(body)) {
+			return is.readAllBytes();
 		} catch(IOException e) {
 			throw new ICAPException(e);
 		}
-		
-		return readResourceAndClose(is);
-		
 	}
 	
 	private byte[] readURL(URL resource) throws ICAPException {
-		
-		InputStream is = null;
-		try {
-			is = resource.openStream();
+		try(final InputStream is = resource.openStream()) {
+			return is.readAllBytes();
 		} catch(IOException e) {
 			throw new ICAPException(e);
 		}
-		
-		return readResourceAndClose(is);
-		
-	}
-	
-	private byte[] readResourceAndClose(InputStream is) throws ICAPException {
-		
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		
-		try {
-			IOUtils.copy(is, out);
-		} catch(IOException e) {
-			throw new ICAPException(e);
-		} finally {
-			try { is.close(); } catch(IOException f){}
-		}
-		
-		return out.toByteArray();
-		
 	}
 	
 }

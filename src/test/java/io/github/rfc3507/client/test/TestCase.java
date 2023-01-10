@@ -1,9 +1,11 @@
 package io.github.rfc3507.client.test;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Random;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -23,31 +25,55 @@ import io.github.rfc3507.utilities.LogService;
 public class TestCase {
 	private LogService logger = LogService.getInstance("TestCase");
 	
-	private String dockerContainerId;
+	private String containerId;
 
-	private final int LOCAL_PORT = 50000 + ( (int) ( Math.random() * 10000 ) );
+	private final int LOCAL_PORT = 50000 + new Random().nextInt(5000);
+
+	private String containerEngine;
+	private boolean containerEngineStarted = false;
+
+	private String getContainerEngine() throws IOException, InterruptedException {
+		Process process = null;
+		int status = -1;
+
+		final String[] engines = {"podman", "docker"};
+
+		for(final String engine: engines) {
+			process = Runtime.getRuntime().exec(new String[] {"which", engine});
+			status = process.waitFor();	
+			if(status == 0) {
+				return engine;
+			}
+		}
+
+		throw new IOException("No Container Engine was found");
+	}
 
 	@BeforeAll
 	public void startup() throws Exception {
-		final Process process = Runtime.getRuntime().exec(new String[] {"docker", "run", "--rm", "-d", "-p"+LOCAL_PORT+":1344", "claudiney/icap-server-java"});
+		this.containerEngine = getContainerEngine();
+
+		final Process process = Runtime.getRuntime().exec(new String[] {this.containerEngine, "run", "--rm", "-d", "-v", "/tmp:/var/lib/clamav", "-p"+LOCAL_PORT+":1344", "docker.io/claudiney/icap-server-java"});
+
 		final int status = process.waitFor();
 
 		if(status != 0) {
-			throw new IllegalStateException("Could not start docker container");
+			throw new IllegalStateException("Could not start " + this.containerEngine + " container engine");
 		}
+
+		this.containerEngineStarted = true;
 
 		final ByteArrayOutputStream cache = new ByteArrayOutputStream();
 		IOUtils.copy(process.getInputStream(), cache);
 
-		dockerContainerId = new String(cache.toByteArray(), StandardCharsets.US_ASCII).replaceAll("[\\r\\n]$", "");
-		logger.info("[Startup] Docker started to load at process {}", this.dockerContainerId);
-
+		containerId = new String(cache.toByteArray(), StandardCharsets.US_ASCII).replaceAll("[\\r\\n]$", "");
+		logger.info("[Startup] {} Container Engine started to load at process {}", this.containerEngine, this.containerId);
 		logger.info("[Startup] Checking readiness...");
 
 		while(true) {
 			Thread.sleep(2000L);
 
-			final Process process2 = Runtime.getRuntime().exec(new String[] {"docker", "logs", this.dockerContainerId});
+			final Process process2 = Runtime.getRuntime().exec(new String[] {containerEngine, "logs", this.containerId});
 			process2.waitFor();
 
 			final StringBuilder sb = new StringBuilder("");
@@ -58,7 +84,8 @@ public class TestCase {
 				sb.append((char)octet);
 			}
 
-			if( sb.toString().contains("bytecode.cvd updated") ) {
+			if( 	sb.toString().contains("bytecode.cvd updated") 
+				||	sb.toString().contains("bytecode.cvd database is up-to-date") ) {
 				break;
 			};
 		}
@@ -74,7 +101,7 @@ public class TestCase {
 	public void optionsSuccessful() throws Exception {
 		logger.info("#optionsSuccessful() STARTED");
 		
-		final ICAPClient client = new ICAPClient("localhost", LOCAL_PORT);
+		final ICAPClient client = ICAPClient.instance("localhost", LOCAL_PORT);
 		logger.info("Icap Client Host {}", client.getIcapHost());
 		logger.info("Icap Client Port {}", client.getIcapPort());
 		logger.info("Icap Client Version {}", ICAPClient.getIcapVersion());
@@ -94,7 +121,7 @@ public class TestCase {
 		final String content = "Hello, There!"; 
 		final byte[] raw = content.getBytes(StandardCharsets.US_ASCII);
 
-		final ICAPRequest request = new ICAPRequest("echo", ICAPRequest.Mode.REQMOD);
+		final ICAPRequest request = ICAPRequest.instance("echo", ICAPRequest.Mode.REQMOD);
 		request.setHttpRequestHeader(
 				( 		"POST / HTTP/1.1\r\n"
 					+	"Content-Type: text/plain\r\n"
@@ -103,7 +130,7 @@ public class TestCase {
 			);
 		request.setHttpRequestBody(raw);
 
-		final ICAPClient client = new ICAPClient("localhost", LOCAL_PORT);
+		final ICAPClient client = ICAPClient.instance("localhost", LOCAL_PORT);
 		client.setConnectTimeout(connect_timeout);
 		client.setReadTimeout(read_timeout);
 		final ICAPResponse response = client.execute(request);
@@ -122,7 +149,7 @@ public class TestCase {
 		final String content = "Hello, There!"; 
 		final byte[] raw = content.getBytes(StandardCharsets.US_ASCII);
 
-		final ICAPRequest request = new ICAPRequest("echo", ICAPRequest.Mode.RESPMOD);
+		final ICAPRequest request = ICAPRequest.instance("echo", ICAPRequest.Mode.RESPMOD);
 		request.setHttpResponseHeader(
 				( 		"HTTP/1.1 200 OK\r\n"
 					+	"Content-Type: text/plain\r\n"
@@ -131,7 +158,7 @@ public class TestCase {
 			);
 		request.setHttpResponseBody(raw);
 
-		final ICAPClient client = new ICAPClient("localhost", LOCAL_PORT);
+		final ICAPClient client = ICAPClient.instance("localhost", LOCAL_PORT);
 		client.setConnectTimeout(connect_timeout);
 		client.setReadTimeout(read_timeout);
 		final ICAPResponse response = client.execute(request);
@@ -156,7 +183,7 @@ public class TestCase {
 
 		final byte[] raw = rawData.toByteArray();
 
-		final ICAPRequest request = new ICAPRequest("virus_scan", ICAPRequest.Mode.REQMOD);
+		final ICAPRequest request = ICAPRequest.instance("virus_scan", ICAPRequest.Mode.REQMOD);
 		request.setHttpResponseHeader(
 				( 		"POST /eicar.com HTTP/1.1\r\n"
 					+	"Content-Type: text/plain\r\n"
@@ -165,11 +192,11 @@ public class TestCase {
 			);
 		request.setHttpResponseBody(raw);
 
-		final ICAPClient client = new ICAPClient("localhost", LOCAL_PORT);
+		final ICAPClient client = ICAPClient.instance("localhost", LOCAL_PORT);
 		client.setConnectTimeout(connect_timeout);
-		client.setReadTimeout(15000);
+		client.setReadTimeout(60000);
 		final ICAPResponse response = client.execute(request);
-		
+
 		logger.info("Response adaptation: HTTP response headers:\n{}", new String(response.getHttpResponseHeader(), StandardCharsets.US_ASCII));
 		logger.info("Response adaptation: HTTP raw response body:\n{}", new String(response.getHttpRawResponseBody(), StandardCharsets.US_ASCII));
 		logger.info("Response adaptation: HTTP shrink response body:\n{}", new String(response.getHttpShrinkResponseBody(), StandardCharsets.US_ASCII));
@@ -179,9 +206,11 @@ public class TestCase {
 
 	@AfterAll
 	public void terminate() throws Exception {
-		logger.info("Stopping Docker process {}", this.dockerContainerId);
-		
-		final Process process = Runtime.getRuntime().exec(new String[] {"docker", "stop", this.dockerContainerId});
+		if ( ! this.containerEngineStarted ) { return; }
+
+		logger.info("Stopping {} Container Engine process {}", this.containerEngine, this.containerId);
+	
+		final Process process = Runtime.getRuntime().exec(new String[] {this.containerEngine, "stop", containerId});
 		process.waitFor();
 
 		final ByteArrayOutputStream cache = new ByteArrayOutputStream();

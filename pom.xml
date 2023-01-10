@@ -1,18 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>net.rfc3507</groupId>
+  <groupId>io.github.rfc3507</groupId>
   <artifactId>icap-client</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.0.0-RC01</version>
 
   <name>icap-client</name>
   <description>ICAP Client Implementation for RFC 3507</description>
+  <url>https://github.com/claudineyns/icap-client.git</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
+
+  <developers>
+    <developer>
+      <id>claudineyns</id>
+      <name>Claudiney Nascimento</name>
+      <email>contato@claudiney.info</email>
+      <url>https://github.com/claudineyns</url>
+    </developer>
+  </developers>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://raw.githubusercontent.com/claudineyns/icap-client/master/LICENSE</url>
+    </license>
+  </licenses>
+
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub OWNER Apache Maven Packages</name>
+      <url>https://maven.pkg.github.com/claudineyns/icap-client.git</url>
+    </repository>
+  </distributionManagement>
 
   <dependencies>
 
@@ -32,28 +59,10 @@
 
   </dependencies>
 
-  <developers>
-    <developer>
-      <id>claudineyns</id>
-      <name>Claudiney Nascimento</name>
-      <email>contato@claudiney.info</email>
-      <url>https://github.com/claudineyns/</url>
-    </developer>
-  </developers>
-
-  <url>https://github.com/claudineyns/icap-client</url>
-
-  <licenses>
-    <license>
-      <name>MIT License</name>
-      <url>https://raw.githubusercontent.com/claudineyns/icap-client/master/LICENSE</url>
-    </license>
-  </licenses>
-
   <build>
 
     <plugins>
-    
+
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.3</version>

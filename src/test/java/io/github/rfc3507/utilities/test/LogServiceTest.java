@@ -25,7 +25,7 @@ public class LogServiceTest {
 		log.debug("Test {} {}", "#debug()", null);
 		log.warning("Test {}", "#warning()");
 		log.error("Test {}", "#error()");
-		log.error("Test", new Exception("Failure", new IllegalStateException("Failure 2")));
+		log.error("Test", new Exception("Failure Test", new IllegalStateException("Failure Test #2")));
 	}
 
 }
