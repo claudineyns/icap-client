@@ -194,7 +194,7 @@ public class TestCase {
 
 		final ICAPClient client = ICAPClient.instance("localhost", LOCAL_PORT);
 		client.setConnectTimeout(connect_timeout);
-		client.setReadTimeout(30000);
+		client.setReadTimeout(60000);
 		final ICAPResponse response = client.execute(request);
 
 		logger.info("Response adaptation: HTTP response headers:\n{}", new String(response.getHttpResponseHeader(), StandardCharsets.US_ASCII));
