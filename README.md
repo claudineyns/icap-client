@@ -25,10 +25,10 @@ In this examples we are assuming that you are running an ICAP server on `127.0.0
 #### Send OPTIONS
 
 ````
-ICAPClient icapClient = new ICAPClient("127.0.0.1", 1344);
+ICAPClient icapClient = ICAPClient.instance("127.0.0.1", 1344);
 icapClient.options("virus_scan");
 ````
-This request will send the following bytes:
+This request will send the following bunch of data:
 ````
 OPTIONS icap://127.0.0.1/virus_scan ICAP/1.0
 Host: 127.0.0.1
@@ -39,11 +39,11 @@ Encapsulated: null-body=0
 #### Send REQMOD
 
 ````
-ICAPClient icapClient = new ICAPClient("127.0.0.1", 1344);
-ICAPRequest icapRequest = new ICAPRequest("virus_scan", ICAPRequest.Mode.REQMOD);
+ICAPClient icapClient = ICAPClient.instance("127.0.0.1", 1344);
+ICAPRequest icapRequest = ICAPRequest.instance("virus_scan", ICAPRequest.Mode.REQMOD);
 icapClient.execute(icapRequest);
 ````
-This request will send the following bytes:
+This request will send the following bunch of data:
 ````
 REQMOD icap://127.0.0.1/virus_scan ICAP/1.0
 Host: 127.0.0.1
@@ -55,11 +55,11 @@ Encapsulated: null-body=0
 #### Send RESPMOD
 
 ````
-ICAPClient icapClient = new ICAPClient("127.0.0.1", 1344);
-ICAPRequest icapRequest = new ICAPRequest("virus_scan", ICAPRequest.Mode.RESPMOD);
+ICAPClient icapClient = ICAPClient.instance("127.0.0.1", 1344);
+ICAPRequest icapRequest = ICAPRequest.instance("virus_scan", ICAPRequest.Mode.RESPMOD);
 icapClient.execute(icapRequest);
 ````
-This request will send the following bytes:
+This request will send the following bunch of data:
 ````
 RESPMOD icap://127.0.0.1/virus_scan ICAP/1.0
 Host: 127.0.0.1
@@ -70,7 +70,9 @@ Encapsulated: null-body=0
 
 ## Deployment
 
-.
+````
+mvn deploy
+````
 
 ## Built With
 
