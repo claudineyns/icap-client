@@ -27,7 +27,7 @@ public final class LogService {
 
 	private LogService(final String name) {
 		this();
-		this.name = String.format(" [%s]", name);
+		this.name = String.format("[%s]", name);
 	}
 
 	public void info(final String template, final Object... args) {
@@ -92,7 +92,8 @@ public final class LogService {
 		final String dateTime = LocalDateTime.now()
 				.format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss", Locale.US));
 
-		final String outMessage = String.format("%s [%5s] %s %s%n", dateTime, level.name(), name, message);
+		final String levelTag = String.format("[%s]", level.name());
+		final String outMessage = String.format("%s %-7s %s %s%n", dateTime, levelTag, name, message);
 
 		switch (level) {
 			case INFO:
