@@ -36,7 +36,7 @@ public class TestCase {
 		Process process = null;
 		int status = -1;
 
-		final String[] engines = {"docker", "podman"};
+		final String[] engines = {"podman", "docker"};
 
 		for(final String engine: engines) {
 			process = Runtime.getRuntime().exec(new String[] {"which", engine});
@@ -67,7 +67,7 @@ public class TestCase {
 		IOUtils.copy(process.getInputStream(), cache);
 
 		containerId = new String(cache.toByteArray(), StandardCharsets.US_ASCII).replaceAll("[\\r\\n]$", "");
-		logger.info("[Startup] {} Container Engine started to load at process {}", this.containerId);
+		logger.info("[Startup] {} Container Engine started to load at process {}", this.containerEngine, this.containerId);
 		logger.info("[Startup] Checking readiness...");
 
 		while(true) {
@@ -194,7 +194,7 @@ public class TestCase {
 
 		final ICAPClient client = ICAPClient.instance("localhost", LOCAL_PORT);
 		client.setConnectTimeout(connect_timeout);
-		client.setReadTimeout(15000);
+		client.setReadTimeout(30000);
 		final ICAPResponse response = client.execute(request);
 
 		logger.info("Response adaptation: HTTP response headers:\n{}", new String(response.getHttpResponseHeader(), StandardCharsets.US_ASCII));

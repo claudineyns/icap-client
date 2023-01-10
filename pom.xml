@@ -5,9 +5,9 @@
 
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>net.rfc3507</groupId>
+  <groupId>io.github.rfc3507</groupId>
   <artifactId>icap-client</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.0.0-RC01</version>
 
   <name>icap-client</name>
   <description>ICAP Client Implementation for RFC 3507</description>
