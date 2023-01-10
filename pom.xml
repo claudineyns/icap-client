@@ -7,7 +7,7 @@
 
   <groupId>io.github.rfc3507</groupId>
   <artifactId>icap-client</artifactId>
-  <version>1.0.0-RC01</version>
+  <version>1.0.0-alpha.1</version>
 
   <name>icap-client</name>
   <description>ICAP Client Implementation for RFC 3507</description>
