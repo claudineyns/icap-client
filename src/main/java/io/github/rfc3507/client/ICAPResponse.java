@@ -10,13 +10,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-@SuppressWarnings("serial")
 public class ICAPResponse implements Serializable {
-	
-	private Map<String, List<String>> headerEntries = new TreeMap<>(String.CASE_INSENSITIVE_ORDER); 
 
-	private Set<String> headers = new LinkedHashSet<>();
-	
+	private final Map<String, List<String>> headerEntries = new TreeMap<>(String.CASE_INSENSITIVE_ORDER); 
+
+	private final Set<String> headers = new LinkedHashSet<>();
+
 	private String protocol;
 	private String version;
 	private int status;
@@ -27,11 +26,9 @@ public class ICAPResponse implements Serializable {
 	
 	private byte[] httpResponseHeader;
 	private byte[] httpResponseBody;
-	
-	ICAPResponse() {
-		
-	}
-	
+
+	ICAPResponse() { /***/ }
+
 	void setProtocol(String protocol) {
 		this.protocol = protocol;
 	}
@@ -64,7 +61,7 @@ public class ICAPResponse implements Serializable {
 		return message;
 	}
 	
-	public String recoverStatusLine() {
+	public String getStatusLine() {
 		return "ICAP/"+getVersion()+" "+getStatus()+" "+getMessage();
 	}
 	
@@ -219,8 +216,7 @@ public class ICAPResponse implements Serializable {
 	
 	@Override
 	public String toString() {
-		return recoverStatusLine();
-	}
-	
+		return getStatusLine();
+	}	
 	
 }

@@ -1,12 +1,9 @@
 package io.github.rfc3507.client;
 
-@SuppressWarnings("serial")
 public class ICAPException extends Exception {
 
-	public ICAPException() {
-		
-	}
-	
+	public ICAPException() { /***/ }
+
 	public ICAPException(String message) {
 		super(message);
 	}
